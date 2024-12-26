@@ -1,95 +1,89 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
 
-export default function Home() {
+import React, { useState } from "react";
+import { Container, Button, Typography, Grid } from "@mui/material";
+
+type Case = {
+  id: number;
+  amount: number;
+  revealed: boolean;
+};
+
+const Home: React.FC = () => {
+  const [cases, setCases] = useState<Case[]>(generateCases());
+  const [selectedCase, setSelectedCase] = useState<number | null>(null);
+  const [bankOffer, setBankOffer] = useState<number | null>(null);
+
+  function generateCases(): Case[] {
+    const amounts = [1, 10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000];
+    return shuffleArray(amounts).map((amount, index) => ({
+      id: index + 1,
+      amount,
+      revealed: false,
+    }));
+  }
+
+  function shuffleArray<T>(array: T[]): T[] {
+    return array.sort(() => Math.random() - 0.5);
+  }
+
+  const handleCaseSelect = (id: number) => {
+    if (selectedCase === null) {
+      setSelectedCase(id);
+    } else {
+      const updatedCases = cases.map((c) =>
+        c.id === id ? { ...c, revealed: true } : c
+      );
+      setCases(updatedCases);
+    }
+  };
+
+  const calculateBankOffer = () => {
+    const unrevealedAmounts = cases.filter((c) => !c.revealed).map((c) => c.amount);
+    const average =
+      unrevealedAmounts.reduce((sum, amount) => sum + amount, 0) / unrevealedAmounts.length;
+    setBankOffer(Math.round(average));
+  };
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+    <Container>
+      <Typography variant="h4" textAlign="center" gutterBottom>
+        Deal or No Deal
+      </Typography>
+      <Grid container spacing={2}>
+        {cases.map((c) => (
+          <Grid item xs={3} key={c.id}>
+            <Button
+              variant={c.revealed ? "outlined" : "contained"}
+              color={c.revealed ? "secondary" : "primary"}
+              onClick={() => handleCaseSelect(c.id)}
+              disabled={c.revealed}
+            >
+              {c.revealed ? `$${c.amount}` : `Case ${c.id}`}
+            </Button>
+          </Grid>
+        ))}
+      </Grid>
+      <Typography variant="h6" textAlign="center" mt={4}>
+        Selected Case: {selectedCase || "None"}
+      </Typography>
+      {bankOffer !== null && (
+        <Typography variant="h6" textAlign="center" mt={2}>
+          Banker Offer: ${bankOffer}
+        </Typography>
+      )}
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={calculateBankOffer}
+        disabled={bankOffer !== null}
+        fullWidth
+        sx={{ mt: 2 }}
+      >
+        Get Banker Offer
+      </Button>
+    </Container>
   );
-}
+};
+
+export default Home;
