@@ -12,6 +12,12 @@ type Case = {
   selected: boolean;
 };
 
+type BonusCase = {
+  id: string;
+  bonus: string;
+  selected: boolean;
+}
+
 type OfferType = {
     divisor: number;
     switchPercentage: number;
@@ -19,6 +25,7 @@ type OfferType = {
 
 const Home: React.FC = () => {
   const [cases, setCases] = useState<Case[]>(generateCases());
+  const [bonusCases, setBonusCases] = useState<BonusCase[]>(generateBonusCases());
   const [selectedCase, setSelectedCase] = useState<number | null>(null);
   const [bankOffer, setBankOffer] = useState<number | null>(null);
   const [switchOffer, setSwitchOffer] = useState<boolean>(false);
@@ -33,22 +40,32 @@ const Home: React.FC = () => {
     }));
   }
 
-const offerRound: Record<number, OfferType> = {
-    5: {divisor: 6, switchPercentage: 0.0},
-    10: {divisor: 5, switchPercentage: 0.0},
-    14: {divisor: 4, switchPercentage: 0.0},
-    17: {divisor: 3, switchPercentage: 0.05},
-    19: {divisor: 2, switchPercentage: 0.075},
-    20: {divisor: 1, switchPercentage: 0.1}
-}
+  function generateBonusCases(): BonusCase[] {
+    const bonuses = ["0", "/2", "x2", "x1", "+1500€"]
 
-function shuffleArray<T>(array: T[]): T[] {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
+    return shuffleArray(bonuses).map((bonus, index) => ({
+      id: `23${String.fromCharCode(65 + index)}`,
+      bonus,
+      selected: false
+    }));
   }
-  return array;
-}
+
+  const offerRound: Record<number, OfferType> = {
+      5: {divisor: 6, switchPercentage: 0.0},
+      10: {divisor: 5, switchPercentage: 0.0},
+      14: {divisor: 4, switchPercentage: 0.0},
+      17: {divisor: 3, switchPercentage: 0.05},
+      19: {divisor: 2, switchPercentage: 0.075},
+      20: {divisor: 1, switchPercentage: 0.1}
+  }
+
+  function shuffleArray<T>(array: T[]): T[] {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
 
 
   const handleCaseSelect = (id: number) => {
@@ -77,6 +94,13 @@ function shuffleArray<T>(array: T[]): T[] {
     }
 
   };
+
+  const handleBonusCaseSelect = (id: string) => {
+    const updatedBonusCases = bonusCases.map((c) =>
+      c.id === id ? { ...c, selected: true } : {...c, selected: false}
+    );
+    setBonusCases(updatedBonusCases);
+  }
 
   const getRevealedCasesCount = (currCases: Case[]) => {
     return currCases.filter((c) => c.revealed).length;
@@ -138,6 +162,7 @@ function shuffleArray<T>(array: T[]): T[] {
                         color={(c.selected) ? "error" : (c.revealed ? "secondary" : "primary")}
                         onClick={() => handleCaseSelect(c.id)}
                         //disabled={c.revealed}
+                        sx={{ width: "100px" }}
                         >
                         {c.revealed ? `€${c.amount}` : `Case ${c.id}`}
                         </Button>
@@ -162,6 +187,22 @@ function shuffleArray<T>(array: T[]): T[] {
                 >
                     {switchOffer ? "Switch Case Offer" : "Get Banker Offer"}
                 </Button>
+
+                <Grid2 container spacing={2} mt={4}>
+                    {bonusCases.map((c) => (
+                    <Grid2 key={c.id}>
+                        <Button
+                        variant="contained"
+                        color={c.selected ? "error" : "primary"}
+                        onClick={() => handleBonusCaseSelect(c.id)}
+                        sx={{ width: "120px" }}
+                        //disabled={c.revealed}
+                        >
+                        {c.selected ? `${c.bonus}` : `Case ${c.id}`}
+                        </Button>
+                    </Grid2>
+                    ))}
+                </Grid2>
             </Box>
 
             {/* Right Column */}
