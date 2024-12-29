@@ -12,10 +12,16 @@ type Case = {
   selected: boolean;
 };
 
+type OfferType = {
+    divisor: number;
+    switchPercentage: number;
+}
+
 const Home: React.FC = () => {
   const [cases, setCases] = useState<Case[]>(generateCases());
   const [selectedCase, setSelectedCase] = useState<number | null>(null);
   const [bankOffer, setBankOffer] = useState<number | null>(null);
+  const [switchOffer, setSwitchOffer] = useState<boolean>(false);
 
   function generateCases(): Case[] {
     const amounts = [0.01, 1, 2, 5, 10, 20, 50, 100, 250, 500, 750, 1000, 1500, 2000, 3000, 4000, 5000, 7500, 10000, 20000, 40000, 70000];
@@ -23,17 +29,17 @@ const Home: React.FC = () => {
       id: index + 1,
       amount,
       revealed: false,
-	  selected: false
+      selected: false
     }));
   }
 
-const offerRound: Record<number, number> = {
-	5: 6,
-	10: 5,
-	14: 4,
-	17: 3,
-	19: 2,
-	20: 1
+const offerRound: Record<number, OfferType> = {
+    5: {divisor: 6, switchPercentage: 0.0},
+    10: {divisor: 5, switchPercentage: 0.0},
+    14: {divisor: 4, switchPercentage: 0.0},
+    17: {divisor: 3, switchPercentage: 0.05},
+    19: {divisor: 2, switchPercentage: 0.075},
+    20: {divisor: 1, switchPercentage: 0.1}
 }
 
 function shuffleArray<T>(array: T[]): T[] {
@@ -46,7 +52,7 @@ function shuffleArray<T>(array: T[]): T[] {
 
 
   const handleCaseSelect = (id: number) => {
-	if (selectedCase === null) {
+    if (selectedCase === null) {
       setSelectedCase(id);
       const updatedCases = cases.map((c) =>
         c.id === id ? { ...c, selected: true } : c
@@ -57,110 +63,130 @@ function shuffleArray<T>(array: T[]): T[] {
         c.id === id ? { ...c, revealed: true } : c
       );
       setCases(updatedCases);
+
+      const revealedCasesCount = getRevealedCasesCount(updatedCases);
+      const random = Math.random();
+       console.log(Object.keys(offerRound), "revealcasecount: ", revealedCasesCount);
+      if (revealedCasesCount in offerRound) {
+        console.log(revealedCasesCount, offerRound[revealedCasesCount].switchPercentage, random);
+      }
+      if ((revealedCasesCount in offerRound) && (random <= offerRound[revealedCasesCount].switchPercentage)) {
+        console.log(revealedCasesCount, offerRound[revealedCasesCount].switchPercentage, random);
+        setSwitchOffer(true);
+      }
     }
+
   };
 
-  const getRevealedCasesCount = () => {
-    return cases.filter((c) => c.revealed).length;
+  const getRevealedCasesCount = (currCases: Case[]) => {
+    return currCases.filter((c) => c.revealed).length;
   };
 
   const calculateBankOffer = () => {
     const unrevealedAmounts = cases.filter((c) => !c.revealed).map((c) => c.amount);
     const average =
-      unrevealedAmounts.reduce((sum, amount) => sum + amount, 0) / unrevealedAmounts.length / offerRound[getRevealedCasesCount()]*0.92;
+      unrevealedAmounts.reduce((sum, amount) => sum + amount, 0) / unrevealedAmounts.length / offerRound[getRevealedCasesCount(cases)].divisor*0.92;
     setBankOffer(Math.round(average));
   };
 
-
+  const resetSelected = () => {
+    const updatedCases = cases.map((c) =>
+      c.selected ? { ...c, selected: false } : c
+    );
+    setCases(updatedCases);
+    setSelectedCase(null);
+    setBankOffer(null);
+    setSwitchOffer(false);
+  };
 
   return (
     <Container maxWidth="lg">
-		<Box sx={{ display: "grid", gridTemplateColumns: "15% 70% 15%", gap: 2 }}>
-			{/* Left Column */}
-			<Box sx={{ padding: 2 }}>
-				<Typography sx={{ mt: 4, mb: 2 }} variant="h6" component="div">
-					Blue Amounts
-				</Typography>
-				<List>
-				{cases.filter((c) => c.amount <= 750).sort((a, b) => a.amount - b.amount).map((c) => (
-					<ListItemButton
-						key={c.id}
-						sx={{
-							backgroundColor: c.revealed ? "black" : "darkblue",
-							color: "white",
-							mb: 1,
-							borderRadius: 2,
-							borderColor: "darkblue",
-						}}
-					>
-						<ListItemText primary={c.amount}/>
-					</ListItemButton>
-				))}
-				</List>
-			</Box>
+        <Box sx={{ display: "grid", gridTemplateColumns: "15% 70% 15%", gap: 2 }}>
+            {/* Left Column */}
+            <Box sx={{ padding: 2 }}>
+                <Typography sx={{ mt: 4, mb: 2 }} variant="h6" component="div">
+                    Blue Amounts
+                </Typography>
+                <List>
+                {cases.filter((c) => c.amount <= 750).sort((a, b) => a.amount - b.amount).map((c) => (
+                    <ListItemButton
+                        key={c.id}
+                        sx={{
+                            backgroundColor: c.revealed ? "black" : "darkblue",
+                            color: "white",
+                            mb: 1,
+                            borderRadius: 2,
+                            borderColor: "darkblue",
+                        }}
+                    >
+                        <ListItemText primary={c.amount}/>
+                    </ListItemButton>
+                ))}
+                </List>
+            </Box>
 
-			{/* Center Column */}
-			<Box sx={{ padding: 2 }}>
-				<Typography variant="h4" textAlign="center" gutterBottom>
-					Deal or No Deal
-				</Typography>
-				<Grid2 container spacing={2}>
-					{cases.map((c) => (
-					<Grid2 key={c.id}>
-						<Button
-						variant={c.revealed ? "contained" : "contained"}
-						color={(c.selected) ? "error" : (c.revealed ? "secondary" : "primary")}
-						onClick={() => handleCaseSelect(c.id)}
-						//disabled={c.revealed}
-						>
-						{c.revealed ? `€${c.amount}` : `Case ${c.id}`}
-						</Button>
-					</Grid2>
-					))}
-				</Grid2>
-				<Typography variant="h6" textAlign="center" mt={4}>
-					Selected Case: {selectedCase || "None"}
-				</Typography>
-				{bankOffer !== null && (
-					<Typography variant="h6" textAlign="center" mt={2}>
-					Banker Offer: €{bankOffer}
-					</Typography>
-				)}
-				<Button
-					variant="contained"
-					color="primary"
-					onClick={calculateBankOffer}
-					fullWidth
-					sx={{ mt: 2 }}
-					disabled={!(getRevealedCasesCount() in offerRound)}
-				>
-					Get Banker Offer
-				</Button>
-			</Box>
+            {/* Center Column */}
+            <Box sx={{ padding: 2 }}>
+                <Typography variant="h4" textAlign="center" gutterBottom>
+                    Deal or No Deal
+                </Typography>
+                <Grid2 container spacing={2}>
+                    {cases.map((c) => (
+                    <Grid2 key={c.id}>
+                        <Button
+                        variant={c.revealed ? "contained" : "contained"}
+                        color={(c.selected) ? "error" : (c.revealed ? "secondary" : "primary")}
+                        onClick={() => handleCaseSelect(c.id)}
+                        //disabled={c.revealed}
+                        >
+                        {c.revealed ? `€${c.amount}` : `Case ${c.id}`}
+                        </Button>
+                    </Grid2>
+                    ))}
+                </Grid2>
+                <Typography variant="h6" textAlign="center" mt={4}>
+                    Selected Case: {selectedCase || "None"}
+                </Typography>
+                {bankOffer !== null && (
+                    <Typography variant="h6" textAlign="center" mt={2}>
+                    Banker Offer: €{bankOffer}
+                    </Typography>
+                )}
+                <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={switchOffer ? resetSelected : calculateBankOffer}
+                    fullWidth
+                    sx={{ mt: 2 }}
+                    disabled={!(getRevealedCasesCount(cases) in offerRound) || (selectedCase === null) }
+                >
+                    {switchOffer ? "Switch Case Offer" : "Get Banker Offer"}
+                </Button>
+            </Box>
 
-			{/* Right Column */}
-			<Box sx={{  padding: 2 }}>
-				<Typography sx={{ mt: 4, mb: 2 }} variant="h6" component="div">
-					Red Amounts
-				</Typography>
-				<List>
-				{cases.filter((c) => c.amount > 750).sort((a, b) => a.amount - b.amount).map((c) => (
-					<ListItemButton
-						key={c.id}
-						sx={{
-							backgroundColor: c.revealed ? "Black" : "firebrick",
-							color: "white",
-							mb: 1,
-							borderRadius: 2,
-							borderColor: "firebrick",
-						}}
-					>
-						<ListItemText primary={c.amount}/>
-					</ListItemButton>
-				))}
-				</List>
-			</Box>
-		</Box>
+            {/* Right Column */}
+            <Box sx={{  padding: 2 }}>
+                <Typography sx={{ mt: 4, mb: 2 }} variant="h6" component="div">
+                    Red Amounts
+                </Typography>
+                <List>
+                {cases.filter((c) => c.amount > 750).sort((a, b) => a.amount - b.amount).map((c) => (
+                    <ListItemButton
+                        key={c.id}
+                        sx={{
+                            backgroundColor: c.revealed ? "Black" : "firebrick",
+                            color: "white",
+                            mb: 1,
+                            borderRadius: 2,
+                            borderColor: "firebrick",
+                        }}
+                    >
+                        <ListItemText primary={c.amount}/>
+                    </ListItemButton>
+                ))}
+                </List>
+            </Box>
+        </Box>
     </Container>
   );
 };
